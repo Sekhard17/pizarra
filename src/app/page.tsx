@@ -134,8 +134,8 @@ export default function Component() {
       const draw = (e: MouseEvent) => {
         if (!isDrawing) return
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = e.clientX - rect.left; // Ajustar las coordenadas del cursor
+        const y = e.clientY - rect.top;  // Ajustar las coordenadas del cursor
 
         ctx.beginPath()
         ctx.moveTo(lastX, lastY)
@@ -146,10 +146,10 @@ export default function Component() {
       }
 
       const startDrawing = async (e: MouseEvent) => {
-        isDrawing = true
         const rect = canvas.getBoundingClientRect();
-        lastX = e.clientX - rect.left;
-        lastY = e.clientY - rect.top;
+        isDrawing = true
+        lastX = e.clientX - rect.left; // Ajustar las coordenadas del cursor
+        lastY = e.clientY - rect.top;  // Ajustar las coordenadas del cursor
 
         ctx.strokeStyle = currentColor
         ctx.lineWidth = currentTool === 'pencil' ? 2 : currentTool === 'brush' ? 5 : 20
@@ -161,8 +161,8 @@ export default function Component() {
             usuario: username,
             inicio_x: lastX,
             inicio_y: lastY,
-            fin_x: lastX, // Inicialmente iguales
-            fin_y: lastY, // Inicialmente iguales
+            fin_x: lastX, 
+            fin_y: lastY,
             color: currentColor,
             herramienta: currentTool,
           }])
