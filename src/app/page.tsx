@@ -124,6 +124,9 @@ export default function Component() {
 
       if (!ctx) return
 
+      const scaleX = canvas.width / canvas.offsetWidth;
+      const scaleY = canvas.height / canvas.offsetHeight;
+
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
 
@@ -134,8 +137,8 @@ export default function Component() {
       const draw = (e: MouseEvent) => {
         if (!isDrawing) return
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left; // Ajustar las coordenadas del cursor
-        const y = e.clientY - rect.top;  // Ajustar las coordenadas del cursor
+        const x = (e.clientX - rect.left) * scaleX; // Ajustar las coordenadas del cursor
+        const y = (e.clientY - rect.top) * scaleY;  // Ajustar las coordenadas del cursor
 
         ctx.beginPath()
         ctx.moveTo(lastX, lastY)
@@ -148,8 +151,8 @@ export default function Component() {
       const startDrawing = async (e: MouseEvent) => {
         const rect = canvas.getBoundingClientRect();
         isDrawing = true
-        lastX = e.clientX - rect.left; // Ajustar las coordenadas del cursor
-        lastY = e.clientY - rect.top;  // Ajustar las coordenadas del cursor
+        lastX = (e.clientX - rect.left) * scaleX; // Ajustar las coordenadas del cursor
+        lastY = (e.clientY - rect.top) * scaleY;  // Ajustar las coordenadas del cursor
 
         ctx.strokeStyle = currentColor
         ctx.lineWidth = currentTool === 'pencil' ? 2 : currentTool === 'brush' ? 5 : 20
@@ -195,6 +198,17 @@ export default function Component() {
   const undo = () => {
     setDrawings(drawings.slice(0, -1));
     setHistory((prevHistory) => [...prevHistory, drawings]);
+    // Redibujar el canvas desde el historial
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      drawings.slice(0, -1).forEach(drawing => {
+        ctx.beginPath();
+        ctx.moveTo(drawing.inicio_x, drawing.inicio_y);
+        ctx.lineTo(drawing.fin_x, drawing.fin_y);
+        ctx.stroke();
+      });
+    }
   };
 
   useEffect(() => {
