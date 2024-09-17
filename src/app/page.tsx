@@ -13,15 +13,14 @@ import { Pencil, Type, Circle, MessageSquare, Send, Eraser } from "lucide-react"
 interface Drawing {
   id?: number;
   usuario: string;
-  inicio_x: number;  // 'start_x' en español
-  inicio_y: number;  // 'start_y' en español
-  fin_x: number;     // 'end_x' en español
-  fin_y: number;     // 'end_y' en español
+  inicio_x: number;  
+  inicio_y: number;  
+  fin_x: number;     
+  fin_y: number;     
   color: string;
-  herramienta: string; // 'tool' en español
+  herramienta: string; 
   creado_en?: string;
 }
-
 
 export default function Component() {
   const [username, setUsername] = useState('')
@@ -35,8 +34,9 @@ export default function Component() {
   const [activeUser, setActiveUser] = useState('')
   const [isWriting, setIsWriting] = useState(false)
   const [writingPosition, setWritingPosition] = useState({ x: 0, y: 0 })
-  const [drawings, setDrawings] = useState<Drawing[]>([]) // Definir correctamente el estado como Drawing[]
-
+  const [drawings, setDrawings] = useState<Drawing[]>([]) 
+  const [history, setHistory] = useState<Drawing[][]>([]) // Para "Control Z"
+  
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const chatRef = useRef<HTMLDivElement | null>(null)
 
@@ -99,7 +99,6 @@ export default function Component() {
       supabase.removeChannel(drawingsChannel)
     }
   }, [])
-  
 
   // --- Enviar un nuevo mensaje ---
   const handleSendMessage = async () => {
@@ -134,40 +133,44 @@ export default function Component() {
 
       const draw = (e: MouseEvent) => {
         if (!isDrawing) return
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         ctx.beginPath()
         ctx.moveTo(lastX, lastY)
-        ctx.lineTo(e.offsetX, e.offsetY)
+        ctx.lineTo(x, y)
         ctx.stroke()
-        lastX = e.offsetX
-        lastY = e.offsetY
+        lastX = x
+        lastY = y
       }
 
       const startDrawing = async (e: MouseEvent) => {
         isDrawing = true
-        lastX = e.offsetX
-        lastY = e.offsetY
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+
         ctx.strokeStyle = currentColor
         ctx.lineWidth = currentTool === 'pencil' ? 2 : currentTool === 'brush' ? 5 : 20
         setActiveUser(username)
       
-        // Inserta el trazo en Supabase con los nombres de columnas en español
         const { error } = await supabase
           .from('dibujos')
           .insert([{
             usuario: username,
             inicio_x: lastX,
             inicio_y: lastY,
-            fin_x: e.offsetX,
-            fin_y: e.offsetY,
+            fin_x: lastX, // Inicialmente iguales
+            fin_y: lastY, // Inicialmente iguales
             color: currentColor,
-            herramienta: currentTool,  // 'tool' en español
+            herramienta: currentTool,
           }])
       
         if (error) {
           console.error('Error insertando dibujo:', error.message)
         }
       }
-      
 
       const stopDrawing = () => {
         isDrawing = false
@@ -188,6 +191,25 @@ export default function Component() {
     }
   }, [isLoggedIn, currentTool, currentColor, username])
 
+  // --- Deshacer (Control Z) ---
+  const undo = () => {
+    setDrawings(drawings.slice(0, -1));
+    setHistory((prevHistory) => [...prevHistory, drawings]);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'z') {
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [drawings]);
+
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (username.trim()) {
@@ -199,9 +221,33 @@ export default function Component() {
   const handleToolChange = (tool: string) => {
     setCurrentTool(tool)
     setIsWriting(false)
+    if (tool === 'eraser') {
+      setCurrentColor('#FFFFFF'); // Cambiar el color a blanco para borrar
+    }
   }
 
   // --- Escribir texto en la pizarra ---
+  const handleTextClick = (e: MouseEvent) => {
+    if (currentTool === 'text') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        setWritingPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setIsWriting(true);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      canvas.addEventListener('click', handleTextClick);
+
+      return () => {
+        canvas.removeEventListener('click', handleTextClick);
+      };
+    }
+  }, [currentTool, canvasRef.current]);
+
   const handleTextInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isWriting && canvasRef.current) {
       const canvas = canvasRef.current
@@ -222,6 +268,13 @@ export default function Component() {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
   }, [messages])
+
+  // --- Manejar "Enter" para enviar mensaje ---
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
 
   // --- Renderización de la interfaz ---
   if (!isLoggedIn) {
@@ -368,7 +421,7 @@ export default function Component() {
                 exit={{ opacity: 0, y: -10 }}
                 className="text-sm text-gray-500"
               >
-                Alguien está escribiendo...
+                {username} está escribiendo...
               </motion.p>
             )}
             <div className="flex space-x-2 w-full">
@@ -381,6 +434,7 @@ export default function Component() {
                   setIsTyping(true)
                   setTimeout(() => setIsTyping(false), 2000)
                 }}
+                onKeyPress={handleKeyPress}
                 className="flex-1"
               />
               <Button size="icon" onClick={handleSendMessage}>
