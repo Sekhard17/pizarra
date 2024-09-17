@@ -133,15 +133,17 @@ export default function Component() {
       let lastY = 0
 
       const draw = (e: MouseEvent) => {
-        if (!isDrawing) return
-        ctx.beginPath()
-        ctx.moveTo(lastX, lastY)
-        ctx.lineTo(e.offsetX, e.offsetY)
-        ctx.stroke()
-        lastX = e.offsetX
-        lastY = e.offsetY
-      }
-
+        if (!isDrawing) return;
+        requestAnimationFrame(() => {
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(e.offsetX, e.offsetY);
+          ctx.stroke();
+          lastX = e.offsetX;
+          lastY = e.offsetY;
+        });
+      };
+      
       const startDrawing = async (e: MouseEvent) => {
         isDrawing = true
         lastX = e.offsetX
