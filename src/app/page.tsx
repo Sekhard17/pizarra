@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { supabase } from "@/lib/supabaseClient" // Importar cliente de Supabase
+import { supabase } from "@/lib/supabase" // Importar cliente de Supabase
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
